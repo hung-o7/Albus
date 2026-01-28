@@ -9,5 +9,5 @@ Hackathon project for the Pi515 AI Challenge: Iowa Social Impact Big Data Quest.
 - [@ethanpam](https://github.com/ethanpam)
 - [@ddang175](https://github.com/ddang175)
 - [@Nick Ramsey](https://github.com/Nick-Chen-21)
-- Hung Doan
+- [@Hung Doan](https://github.com/hung-o7)
 

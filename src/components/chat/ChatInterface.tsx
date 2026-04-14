@@ -8,6 +8,7 @@ import {
   Mic as MicIcon,
   MicOff as MicOffIcon,
   VolumeUp as SpeakIcon,
+  VolumeOff as VolumeOffIcon,
   Stop as StopIcon,
 } from '@mui/icons-material';
 import { chatService, ChatMessage } from '../../services/chatService';
@@ -29,6 +30,7 @@ export default function ChatInterface({ classroomId, classroomName, weekNumber }
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
   const [, setSpeaking] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [speakingMessageId, setSpeakingMessageId] = useState<number | null>(null);
@@ -81,7 +83,7 @@ export default function ChatInterface({ classroomId, classroomName, weekNumber }
       const assistantMsg: ChatMessage = { role: 'assistant', content: reply };
       setMessages(prev => {
         const updated = [...prev, assistantMsg];
-        setTimeout(() => speak(reply, updated.length - 1), 200);
+        if (ttsEnabled) setTimeout(() => speak(reply, updated.length - 1), 200);
         return updated;
       });
     } catch (err: any) {
@@ -90,7 +92,7 @@ export default function ChatInterface({ classroomId, classroomName, weekNumber }
     } finally {
       setSending(false);
     }
-  }, [classroomId, weekNumber, sending, speak]);
+  }, [classroomId, weekNumber, sending, speak, ttsEnabled]);
 
   const startRecording = useCallback(() => {
     if (!SpeechRecognitionAPI) {
@@ -152,6 +154,15 @@ export default function ChatInterface({ classroomId, classroomName, weekNumber }
           size="small"
           sx={{ ml: 'auto', bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontSize: '0.7rem' }}
         />
+        <Tooltip title={ttsEnabled ? 'Turn off voice' : 'Turn on voice'}>
+          <IconButton
+            size="small"
+            onClick={() => { setTtsEnabled(v => !v); if (!ttsEnabled) return; window.speechSynthesis.cancel(); setSpeakingMessageId(null); setSpeaking(false); }}
+            sx={{ color: 'white', opacity: ttsEnabled ? 1 : 0.5 }}
+          >
+            {ttsEnabled ? <SpeakIcon /> : <VolumeOffIcon />}
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Messages */}

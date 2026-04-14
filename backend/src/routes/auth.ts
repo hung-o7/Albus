@@ -73,15 +73,32 @@ router.get('/me', requireAuth, (req: AuthRequest, res: Response): void => {
 });
 
 router.get('/speech-token', requireAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
+  console.log('[speech-token] HIT');
   const key = process.env.AZURE_SPEECH_KEY;
   const region = process.env.AZURE_SPEECH_REGION || 'eastus';
+  console.log('[speech-token] region:', region);
   if (!key) { res.status(503).json({ message: 'Azure Speech not configured. Add AZURE_SPEECH_KEY to backend/.env' }); return; }
   try {
+    console.log('[speech-token] region:', region);
+    console.log('[speech-token] key length:', key?.length);
+    console.log('[speech-token] key first 4:', key?.slice(0, 4));
+    console.log('[speech-token] key has whitespace:', /\s/.test(key || ''));
+
     const response = await fetch(
-      `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
-      { method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': key } }
+  `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+  {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': key,
+      'Content-Length': '0',
+        },
+      }
     );
-    if (!response.ok) { res.status(502).json({ message: 'Failed to get Azure token' }); return; }
+    if (!response.ok) {
+      const body = await response.text();
+      console.error(`Azure Speech error ${response.status}: ${body}`);
+      res.status(502).json({ message: `Failed to get Azure token (${response.status}): ${body}` }); return;
+    }
     const token = await response.text();
     res.json({ token, region });
   } catch {

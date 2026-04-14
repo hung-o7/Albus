@@ -66,6 +66,32 @@ export async function chat(
     ? `\n\nAbout this student (use their interests to make examples more fun and relatable): ${studentRow.bio.trim()}`
     : '';
 
+  // Load struggling words from reading assessments in this classroom
+  const recentAttempts = db.prepare(`
+    SELECT ra.word_details
+    FROM reading_attempts ra
+    JOIN reading_assignments ras ON ra.assignment_id = ras.id
+    WHERE ra.student_id = ? AND ras.classroom_id = ?
+    ORDER BY ra.created_at DESC
+    LIMIT 5
+  `).all(studentId, classroomId) as any[];
+
+  const strugglingWords: string[] = [];
+  for (const attempt of recentAttempts) {
+    try {
+      const words: { word: string; accuracyScore: number; errorType: string }[] = JSON.parse(attempt.word_details);
+      for (const w of words) {
+        if ((w.errorType !== 'None' || w.accuracyScore < 75) && !strugglingWords.includes(w.word.toLowerCase())) {
+          strugglingWords.push(w.word.toLowerCase());
+        }
+      }
+    } catch { /* ignore malformed rows */ }
+  }
+
+  const readingContext = strugglingWords.length > 0
+    ? `\n\nThis student has struggled to pronounce these words in recent reading assessments: ${strugglingWords.join(', ')}. If any of these words come up naturally in your explanation, gently help them sound it out (e.g., break it into syllables). Don't force it — only do this when it fits naturally.`
+    : '';
+
   // Load course materials for context
   const materials = db.prepare(
     "SELECT extracted_text, original_name FROM course_materials WHERE classroom_id = ? AND week_number = ? AND extracted_text IS NOT NULL AND TRIM(extracted_text) != ''"
@@ -90,7 +116,7 @@ export async function chat(
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-flash-latest',
-    systemInstruction: ALBUS_SYSTEM_PROMPT + bioContext + materialsContext,
+    systemInstruction: ALBUS_SYSTEM_PROMPT + bioContext + readingContext + materialsContext,
   });
 
   const chatSession = model.startChat({ history });
